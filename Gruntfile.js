@@ -42,10 +42,22 @@ module.exports = function(grunt) {
 			}
 		},
 
+		copy: {
+			js: {
+				files : [{
+					expand: true,
+					dot: true,
+					flatten: true,
+					src: [ 'js/jquery.keyboard.js' ],
+					dest: 'dist/js/'
+				}]
+			}
+		},
+
 		concat: {
 			exts: {
 				options: {
-					banner: nomod + '/*! jQuery UI Virtual Keyboard - ALL Extensions + Mousewheel */\n'
+					banner: nomod + '/*! jQuery UI Virtual Keyboard (<%= pkg.version %>) - ALL Extensions + Mousewheel */\n'
 				},
 				files: {
 					'js/jquery.keyboard.extension-all.js': [ 'js/jquery.keyboard.extension-*.js', 'js/jquery.mousewheel.js' ]
@@ -125,7 +137,9 @@ module.exports = function(grunt) {
 
 		uglify: {
 			options: {
-				preserveComments: 'some',
+				preserveComments: function( node, comment ) {
+					return /^!/.test( comment.value );
+				},
 				report: 'gzip'
 			},
 			core: {
@@ -174,9 +188,9 @@ module.exports = function(grunt) {
 			}
 		},
 
-//		qunit: {
-//			files: ['test/index.html']
-//		},
+		qunit: {
+			files: ['testing/test.html']
+		},
 
 		watch: {
 			scripts: {
@@ -189,16 +203,19 @@ module.exports = function(grunt) {
 
 	grunt.loadNpmTasks('grunt-contrib-clean');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
-	// grunt.loadNpmTasks('grunt-contrib-qunit');
+	grunt.loadNpmTasks('grunt-contrib-qunit');
 	grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
 	grunt.loadNpmTasks('grunt-contrib-watch');
+	grunt.loadNpmTasks('grunt-contrib-copy');
 
 	// Default task.
 	grunt.registerTask('default', [
 		'clean:core',
 		'jshint:core',
+		'qunit',
+		'copy',
 		'concat:exts',
 		'cssmin',
 		'uglify:core',
@@ -213,10 +230,14 @@ module.exports = function(grunt) {
 		'uglify'
 	]);
 
+	function escapeRegExp(str) {
+		return str.replace(/[$()*+\-.\/?[\\\]^{|}]/g, "\\$&");
+	}
+
 	// update keyboard.jquery.json file version numbers to match the package.json version
 	grunt.registerTask( 'updateManifest', function() {
 		var i, project,
-			projectFile = [ 'keyboard.jquery.json' ],
+			projectFile = [ 'keyboard.jquery.json', 'bower.json' ],
 			len = projectFile.length;
 		for ( i = 0; i < len; i++ ) {
 			if ( !grunt.file.exists( projectFile[ i ] ) ) {
@@ -224,8 +245,24 @@ module.exports = function(grunt) {
 				return true; // return false to abort the execution
 			}
 			project = grunt.file.readJSON( projectFile[ i ] ); // get file as json object
-			project.version = pkg.version;
+			if (i === 0 ) {
+				// only update version in keyboard.jquery.json
+				project.version = pkg.version;
+			} else if (i === 1) {
+				// update devDependencies in bower
+				project.devDependencies = pkg.devDependencies;
+			}
 			grunt.file.write( projectFile[i], JSON.stringify( project, null, 2 ) ); // serialize it back to file
+		}
+		// check internal version number
+		project = grunt.file.read('js/jquery.keyboard.js');
+		if (
+			new RegExp(escapeRegExp('/*! jQuery UI Virtual Keyboard v' + pkg.version)).test(project) &&
+			new RegExp(escapeRegExp("base.version = '" + pkg.version)).test(project)
+		) {
+			console.info('versions all match!');
+		} else {
+			grunt.log.writeln('\n**** version mismatch! ****'['red'].bold);
 		}
 	});
 

@@ -1,5 +1,5 @@
-/*! jQuery UI Virtual Keyboard Typing Simulator v1.10.0 *//*
- * for Keyboard v1.18+ only (9/14/2015)
+/*! jQuery UI Virtual Keyboard Typing Simulator v1.10.3 *//*
+ * for Keyboard v1.18+ only (1/5/2017)
  *
  * By Rob Garrison (aka Mottie & Fudgey)
  * Licensed under the MIT License
@@ -85,6 +85,8 @@
 				9  : 'tab',
 				13 : 'enter',
 				32 : 'space',
+				37 : 'left',
+				39 : 'right',
 				46 : 'del'
 			};
 			base.typing_event = false;
@@ -96,8 +98,8 @@
 			base.typing_setup = function(){
 				var kbevents = $keyboard.events,
 					namespace = base.typing_namespace;
-				base.$el.add( base.$preview ).unbind(namespace);
 				base.$el
+					.unbind( namespace )
 					.bind([ kbevents.kbHidden, kbevents.kbInactive, '' ].join( namespace + ' ' ), function(e){
 						base.typing_reset();
 					})
@@ -105,10 +107,12 @@
 						base.typing_setup();
 					});
 				base.$allKeys
+					.unbind( namespace )
 					.bind('mousedown' + namespace, function(){
 						base.typing_reset();
 					});
 				base.$preview
+				.unbind( namespace )
 				.bind('keyup' + namespace, function(e){
 					if (o.init && o.lockTypeIn) { return false; }
 					if (e.which >= 37 && e.which <=40) { return; } // ignore arrow keys
@@ -134,7 +138,7 @@
 					}
 					base.typing_event = true;
 					// Simulate key press for tab and backspace since they don't fire the keypress event
-					if (e.which === 8 || e.which === 9) {
+					if (base.typing_xref[e.which]) {
 						base.typing_findKey( '', e ); // pass event object
 					}
 
@@ -207,14 +211,15 @@
 				// All of this breaks when the CapLock is on... unable to find a cross-browser method that works.
 				tar = '.' + kbcss.keyButton + '[data-action="' + k + '"]';
 				if (base.typing_event && e) {
-					if (base.typing_xref.hasOwnProperty(e.keyCode || e.which)) {
+					// xref used for keydown ( 46 = delete in keypress & period on keydown )
+					if (e.type !== 'keypress' && base.typing_xref.hasOwnProperty(e.keyCode || e.which)) {
 						// special named keys: bksp, tab and enter
-						tar = '.' + kbcss.keyPrefix + base.typing_xref[e.keyCode || e.which];
+						tar = '.' + kbcss.keyPrefix + base.processName( base.typing_xref[e.keyCode || e.which] );
 					} else {
 						m = String.fromCharCode(e.charCode || e.which);
 						tar = (mappedKeys.hasOwnProperty(m)) ?
-							'.' + kbcss.keyButton + '[data-action="' + mappedKeys[m]  + '"]' :
-							'.' + kbcss.keyPrefix + m;
+							'.' + kbcss.keyButton + '[data-value="' + mappedKeys[m].replace(/"/g, '\\"') + '"]' :
+							'.' + kbcss.keyPrefix + base.processName( m );
 					}
 				}
 				// find key
@@ -241,7 +246,7 @@
 						// show correct key set
 						base.shiftActive = /shift/.test(meta);
 						base.altActive = /alt/.test(meta);
-						base.metaActive = base.last.keyset[2] = (meta).match(/meta\d+/) || false;
+						base.metaActive = base.last.keyset[2] = (meta).match(/meta[\w-]+/) || false;
 						// make the plugin think we're passing it a jQuery object with a name
 						base.showSet( base.metaActive );
 						// Add the key
@@ -308,13 +313,14 @@
 				// visible event is fired before this extension is initialized, so check!
 				if (base.options.alwaysOpen && base.isVisible()) {
 					base.typing_setup();
+				} else {
+					// capture and simulate typing
+					base.$el
+						.unbind( $keyboard.events.kbBeforeVisible + base.typing_namespace )
+						.bind( $keyboard.events.kbBeforeVisible + base.typing_namespace, function(){
+							base.typing_setup();
+						});
 				}
-				// capture and simulate typing
-				base.$el
-					.unbind( $keyboard.events.kbBeforeVisible + base.typing_namespace )
-					.bind( $keyboard.events.kbBeforeVisible + base.typing_namespace, function(){
-						base.typing_setup();
-					});
 			}
 
 		});
