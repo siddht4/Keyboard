@@ -10,10 +10,10 @@ module.exports = function(grunt) {
 		'█████▀ ▀████▀   ██  ██ ▀████▀   ██     ██ ██ ██ ▀████▀ █████▀ ██ ██     █████▀\n*/\n',
 
 	hintOpts = {
-		"jquery": true,
-		"browser": true,
-		"sub": true, // used by layouts
-		"-W100": true // ignore "This character may get silently deleted by one or more browsers."
+		'jquery': true,
+		'browser': true,
+		'sub': true, // used by layouts
+		'-W100': true // ignore "This character may get silently deleted by one or more browsers."
 	};
 
 	// Project configuration.
@@ -137,8 +137,9 @@ module.exports = function(grunt) {
 
 		uglify: {
 			options: {
-				preserveComments: function( node, comment ) {
-					return /^!/.test( comment.value );
+				output: {
+					comments: /^!/,
+					beautify: false
 				},
 				report: 'gzip'
 			},
@@ -231,13 +232,13 @@ module.exports = function(grunt) {
 	]);
 
 	function escapeRegExp(str) {
-		return str.replace(/[$()*+\-.\/?[\\\]^{|}]/g, "\\$&");
+		return str.replace(/[$()*+\-.\/?[\\\]^{|}]/g, '\\$&');
 	}
 
 	// update keyboard.jquery.json file version numbers to match the package.json version
 	grunt.registerTask( 'updateManifest', function() {
 		var i, project,
-			projectFile = [ 'keyboard.jquery.json', 'bower.json' ],
+			projectFile = [ 'keyboard.jquery.json' ],
 			len = projectFile.length;
 		for ( i = 0; i < len; i++ ) {
 			if ( !grunt.file.exists( projectFile[ i ] ) ) {
@@ -248,9 +249,6 @@ module.exports = function(grunt) {
 			if (i === 0 ) {
 				// only update version in keyboard.jquery.json
 				project.version = pkg.version;
-			} else if (i === 1) {
-				// update devDependencies in bower
-				project.devDependencies = pkg.devDependencies;
 			}
 			grunt.file.write( projectFile[i], JSON.stringify( project, null, 2 ) ); // serialize it back to file
 		}
@@ -258,11 +256,16 @@ module.exports = function(grunt) {
 		project = grunt.file.read('js/jquery.keyboard.js');
 		if (
 			new RegExp(escapeRegExp('/*! jQuery UI Virtual Keyboard v' + pkg.version)).test(project) &&
-			new RegExp(escapeRegExp("base.version = '" + pkg.version)).test(project)
+			new RegExp(escapeRegExp('base.version = \'' + pkg.version)).test(project)
 		) {
 			console.info('versions all match!');
 		} else {
 			grunt.log.writeln('\n**** version mismatch! ****'['red'].bold);
+		}
+		// check internal version number
+		project = grunt.file.read('README.md');
+		if (!new RegExp(escapeRegExp('### Version ' + pkg.version)).test(project)) {
+			grunt.log.writeln('\n**** Missing Readme entry! ****'['red'].bold);
 		}
 	});
 

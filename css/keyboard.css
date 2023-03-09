@@ -16,6 +16,10 @@
 .ui-keyboard div {
 	font-size: 1.1em;
 }
+.ui-keyboard[contenteditable] {
+	white-space: pre;
+}
+
 .ui-keyboard-button {
 	height: 2em;
 	min-width: 2em;
@@ -223,6 +227,10 @@ button.ui-keyboard-toggle.ui-keyboard-disabled span {
 	6 buttons * 2.2em = 13.2em, etc
 	*/
 	max-width: 22em; /* 10 buttons */
+}
+.ui-keyboard.ui-keyboard-popup-open .ui-keyboard-keyset .ui-keyboard-button {
+	/* Disable keys under overlay while popup is open - see #654 */
+	pointer-events: none;
 }
 
 /*** Extender keyboard extension ***/
